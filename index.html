@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV BRICS Digital Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   TV BRICS Dashboard — BRICS Gold Theme
+   ═══════════════════════════════════════════ */
+:root {
+  --bg-primary: #0C1220;
+  --bg-secondary: #151E30;
+  --bg-card: #1A2540;
+  --bg-card-hover: #1F2D4D;
+  --accent: #D4A853;
+  --accent-dim: rgba(212,168,83,0.15);
+  --accent-blue: #3B82F6;
+  --success: #10B981;
+  --success-bg: rgba(16,185,129,0.12);
+  --danger: #EF4444;
+  --danger-bg: rgba(239,68,68,0.12);
+  --warning: #F59E0B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: rgba(148,163,184,0.12);
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  padding: 32px 0 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.header-logo {
+  font-size: 0.85rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.header h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.header h1 span { color: var(--accent); }
+.header-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+.refresh-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: rotate(180deg);
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding: 12px 0;
+  scrollbar-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+}
+.tabs::-webkit-scrollbar { display:none; }
+.tab {
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.tab:hover { background: var(--bg-card); border-color: var(--accent); color: var(--text-primary); }
+.tab.active {
+  background: linear-gradient(135deg, var(--accent), #C4963F);
+  color: var(--bg-primary);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sections ── */
+.section { display: none; animation: fadeIn 0.3s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── KPI Grid ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.kpi-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.kpi-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.kpi-change.up { color: var(--success); background: var(--success-bg); }
+.kpi-change.down { color: var(--danger); background: var(--danger-bg); }
+.kpi-sub { color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+tr:hover td { background: rgba(212,168,83,0.03); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-up { background: var(--success-bg); color: var(--success); }
+.badge-down { background: var(--danger-bg); color: var(--danger); }
+.badge-neutral { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+/* ── Geo bars ── */
+.geo-grid { display: flex; flex-direction: column; gap: 10px; }
+.geo-item { display: flex; align-items: center; gap: 12px; }
+.geo-country { min-width: 160px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+.geo-bar { flex: 1; height: 28px; background: var(--bg-card); border-radius: 6px; overflow: hidden; }
+.geo-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #C4963F);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bg-primary);
+  transition: width 0.8s ease;
+}
+
+/* ── Metrics grid ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.metric-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.metric-title { color: var(--accent); font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+.metric-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
+.metric-detail { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* ── Chart container ── */
+.chart-wrap { position: relative; height: 320px; margin-top: 8px; }
+
+/* ── Loading ── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-text { color: var(--text-muted); font-size: 0.95rem; }
+.error-box {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  color: var(--danger);
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 32px 0 16px;
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Print ── */
+@media print {
+  body { background: white; color: #333; }
+  .tabs { display: none; }
+  .section { display: block !important; page-break-inside: avoid; }
+  .kpi-card, .card, .metric-card { border: 1px solid #ddd; box-shadow: none; }
+  .kpi-card::before { background: #D4A853; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .container { padding: 12px; }
+  .header h1 { font-size: 1.5rem; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-value { font-size: 1.5rem; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .geo-country { min-width: 100px; font-size: 0.8rem; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 6px 8px; }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .tabs { gap: 4px; }
+  .tab { padding: 8px 14px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Loading state ═══ -->
+<div class="container" id="loadingState">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Загрузка данных из Google Sheets...</div>
+  </div>
+</div>
+
+<!-- ═══ Error state ═══ -->
+<div class="container" id="errorState" style="display:none">
+  <div class="loading">
+    <div class="error-box">
+      <h3>Не удалось загрузить данные</h3>
+      <p id="errorMessage" style="margin-top:8px"></p>
+      <p style="margin-top:12px;color:var(--text-muted)">Проверьте подключение к Google Sheets Web App</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Main dashboard ═══ -->
+<div class="container" id="dashboard" style="display:none">
+
+  <div class="header">
+    <div class="header-logo">TV BRICS Digital</div>
+    <h1>Дашборд — <span id="periodTitle">...</span></h1>
+    <div class="header-meta">
+      Обновлено: <span id="updatedAt">—</span>
+      <button class="refresh-btn" onclick="location.reload()" title="Обновить данные">&#x21bb;</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="overview">🏠 Обзор</div>
+    <div class="tab" data-tab="sites">🌐 Сайты</div>
+    <div class="tab" data-tab="social">📱 Соцсети</div>
+    <div class="tab" data-tab="content">📝 Контент</div>
+    <div class="tab" data-tab="podcasts">🎧 Подкасты & Эксперты</div>
+    <div class="tab" data-tab="partners">🤝 Партнёры</div>
+  </div>
+
+  <!-- ═══ ОБЗОР ═══ -->
+  <div class="section active" id="sec-overview">
+    <div class="kpi-grid" id="overviewKPI"></div>
+
+    <div class="card">
+      <div class="card-title">📈 Динамика посещаемости tvbrics.com</div>
+      <div class="chart-wrap"><canvas id="trafficChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌍 География аудитории</div>
+      <div class="geo-grid" id="geoGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══ САЙТЫ ═══ -->
+  <div class="section" id="sec-sites">
+    <div class="metrics-grid" id="sitesCards"></div>
+    <div class="card">
+      <div class="card-title">📊 Детальная статистика</div>
+      <div style="overflow-x:auto"><table id="sitesTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ СОЦСЕТИ ═══ -->
+  <div class="section" id="sec-social">
+    <div class="card">
+      <div class="card-title">📊 Все платформы</div>
+      <div style="overflow-x:auto"><table id="socialTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Топ-5 по подписчикам</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="socialChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══ КОНТЕНТ ═══ -->
+  <div class="section" id="sec-content">
+    <div class="card">
+      <div class="card-title">📝 Производство контента по языковым версиям</div>
+      <div style="overflow-x:auto"><table id="contentTable"></table></div>
+    </div>
+    <div class="card" id="newsletterCard">
+      <div class="card-title">📧 Рассылка</div>
+      <div style="overflow-x:auto"><table id="newsletterTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ ПОДКАСТЫ & ЭКСПЕРТЫ ═══ -->
+  <div class="section" id="sec-podcasts">
+    <div class="kpi-grid" id="podcastsExpertsKPI"></div>
+    <div class="card">
+      <div class="card-title">🎧 Прослушивания подкастов по языковым версиям</div>
+      <div style="overflow-x:auto"><table id="podcastsTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">👤 Проект «Эксперты»</div>
+      <div style="overflow-x:auto"><table id="expertsTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ ПАРТНЁРЫ ═══ -->
+  <div class="section" id="sec-partners">
+    <div class="card">
+      <div class="card-title">🤝 Партнёры — публикации за месяц</div>
+      <div style="overflow-x:auto"><table id="partnersTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📰 Партнёры (новости) — публикации за месяц</div>
+      <div style="overflow-x:auto"><table id="newsPartnersTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📰 Цитируемость — СМИ</div>
+      <div style="overflow-x:auto"><table id="citSiteTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📱 Цитируемость — Соцсети</div>
+      <div style="overflow-x:auto"><table id="citSocialTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ Footer ═══ -->
+  <div class="footer">
+    <div>TV BRICS Digital &copy; 2025-2026</div>
+    <div>Данные обновляются автоматически из Google Sheets</div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+
+// ⚠️ ВСТАВЬТЕ URL ВАШЕГО APPS SCRIPT WEB APP СЮДА:
+const API_URL = 'https://script.google.com/macros/s/AKfycbzHedbOcW0uZH9nvMlnq9T93vomTvYD6x7y0hsTdMBmGSFCvtA0o0z5ECmMfzmnngvO/exec';
+
+// Если API_URL пуст — используем демо-режим с тестовыми данными
+const DEMO_MODE = !API_URL;
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async function() {
+  // Tabs
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  try {
+    var data;
+    if (DEMO_MODE) {
+      data = getDemoData();
+    } else {
+      var resp = await fetch(API_URL);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      data = await resp.json();
+    }
+    renderDashboard(data);
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    setTimeout(animateCountUp, 100);
+  } catch(e) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorMessage').textContent = e.message;
+  }
+});
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function renderDashboard(data) {
+  // Header
+  document.getElementById('periodTitle').textContent = data.meta.periodTitle || '—';
+  document.getElementById('updatedAt').textContent = formatDate(data.meta.updatedAt);
+
+  renderOverview(data);
+  renderSites(data);
+  renderSocial(data);
+  renderContent(data);
+  renderPodcastsExperts(data);
+  renderPartners(data);
+}
+
+// ── Overview ──
+function renderOverview(data) {
+  var sites = data.sites ? data.sites.sections : [];
+  var social = data.social ? data.social.sections : [];
+  var content = data.content ? data.content.sections : [];
+  var citations = data.citations || {};
+
+  // KPI cards
+  var kpis = [];
+
+  // Визиты tvbrics.com
+  var tvbVisits = findField(sites, 'САЙТ TVBRICS.COM', 'Визиты');
+  if (tvbVisits) kpis.push({ label: '🌐 Визиты tvbrics.com', value: tvbVisits.current, change: tvbVisits.changePercent });
+
+  // Просмотры
+  var tvbViews = findField(sites, 'САЙТ TVBRICS.COM', 'Просмотры');
+  if (tvbViews) kpis.push({ label: '📄 Просмотры', value: tvbViews.current, change: tvbViews.changePercent });
+
+  // Telegram подписчики
+  var tg = findField(social, 'Telegram', 'Подписчики');
+  if (tg) kpis.push({ label: '📲 Telegram', value: tg.current, change: tg.changePercent });
+
+  // YouTube подписчики
+  var yt = findField(social, 'YouTube', 'Подписчики');
+  if (yt) kpis.push({ label: '📺 YouTube', value: yt.current, change: yt.changePercent });
+
+  // Контент за месяц (сумма)
+  var contentTotal = 0;
+  content.forEach(function(sec) {
+    sec.fields.forEach(function(f) {
+      if (f.current && typeof f.current === 'number') contentTotal += f.current;
+    });
+  });
+  if (contentTotal > 0) kpis.push({ label: '📝 Контент за месяц', value: contentTotal, change: null });
+
+  // Эксперты
+  var experts = data.experts ? data.experts.sections : [];
+  var newExperts = findField(experts, 'СТАТИСТИКА ПРОЕКТА «ЭКСПЕРТЫ»', 'Новые эксперты за месяц');
+  if (newExperts && newExperts.current) kpis.push({ label: '👤 Эксперты', value: newExperts.current, change: newExperts.changePercent });
+
+  // Цитирования
+  var citTotal = findFieldDirect(citations.site, 'Всего цитат за месяц');
+  if (citTotal) kpis.push({ label: '📰 Цитирования СМИ', value: citTotal.current, change: citTotal.change, isAbsolute: true });
+
+  var html = '';
+  kpis.forEach(function(kpi) {
+    var changeHtml = '';
+    if (kpi.change !== null && kpi.change !== undefined) {
+      var dir = kpi.change >= 0 ? 'up' : 'down';
+      var arrow = kpi.change >= 0 ? '↗' : '↘';
+      var val = kpi.isAbsolute ? (kpi.change >= 0 ? '+' : '') + fmt(kpi.change) : (kpi.change >= 0 ? '+' : '') + kpi.change.toFixed(1) + '%';
+      changeHtml = '<div class="kpi-change ' + dir + '">' + arrow + ' ' + val + '</div>';
+    }
+    var targetAttr = (typeof kpi.value === 'number' && kpi.value > 10) ? ' data-target="' + kpi.value + '"' : '';
+    html += '<div class="kpi-card"><div class="kpi-label">' + kpi.label + '</div>' +
+            '<div class="kpi-value"' + targetAttr + '>' + fmt(kpi.value) + '</div>' + changeHtml + '</div>';
+  });
+  document.getElementById('overviewKPI').innerHTML = html;
+
+  // Traffic chart
+  renderTrafficChart(data);
+
+  // Geography
+  renderGeo(data);
+}
+
+function renderTrafficChart(data) {
+  var sites = data.sites ? data.sites.sections : [];
+  var tvb = sites.find(function(s){ return s.title === 'САЙТ TVBRICS.COM'; });
+  if (!tvb) return;
+
+  var visitsField = tvb.fields.find(function(f){ return f.label === 'Визиты'; });
+  var viewsField = tvb.fields.find(function(f){ return f.label === 'Просмотры'; });
+  if (!visitsField) return;
+
+  var months = data.meta.months;
+  var last12 = months.slice(-12);
+  var labels = last12.map(function(m){ return m; });
+  var visits = last12.map(function(m){ return visitsField.values[m] || 0; });
+  var views = last12.map(function(m){ return viewsField ? (viewsField.values[m] || 0) : 0; });
+
+  new Chart(document.getElementById('trafficChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Визиты', data: visits, borderColor: '#D4A853', backgroundColor: 'rgba(212,168,83,0.1)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#D4A853' },
+        { label: 'Просмотры', data: views, borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3B82F6' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#94A3B8', font: { size: 12 } } } },
+      scales: {
+        x: { ticks: { color: '#64748B', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { ticks: { color: '#64748B', callback: function(v){ return fmtShort(v); } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+      }
+    }
+  });
+}
+
+function renderGeo(data) {
+  var sites = data.sites ? data.sites.sections : [];
+  var geo = sites.find(function(s){ return s.title.indexOf('ГЕОГРАФИЯ') >= 0; });
+  if (!geo) return;
+
+  var flags = { 'Россия': '🇷🇺', 'Бразилия': '🇧🇷', 'Китай': '🇨🇳', 'ЮАР': '🇿🇦', 'Индия': '🇮🇳', 'Египет': '🇪🇬', 'ОАЭ': '🇦🇪', 'Саудовская Аравия': '🇸🇦', 'Эфиопия': '🇪🇹', 'Иран': '🇮🇷', 'Индонезия': '🇮🇩' };
+
+  var items = geo.fields.map(function(f) {
+    var name = f.label.replace(', %', '').replace(' %', '');
+    var val = f.current;
+    if (typeof val === 'number' && val < 1) val = val * 100; // 0.162 → 16.2
+    return { name: name, value: val || 0, flag: flags[name] || '🌍' };
+  }).sort(function(a,b){ return b.value - a.value; });
+
+  var maxVal = items.length > 0 ? items[0].value : 1;
+  var html = '';
+  items.forEach(function(item) {
+    var pct = Math.max(2, (item.value / maxVal) * 100);
+    html += '<div class="geo-item">' +
+      '<div class="geo-country">' + item.flag + ' ' + item.name + '</div>' +
+      '<div class="geo-bar"><div class="geo-fill" style="width:' + pct + '%">' + item.value.toFixed(1) + '%</div></div>' +
+      '</div>';
+  });
+  document.getElementById('geoGrid').innerHTML = html;
+}
+
+// ── Sites ──
+function renderSites(data) {
+  var sections = data.sites ? data.sites.sections : [];
+  var siteSections = sections.filter(function(s){ return s.title.indexOf('САЙТ') >= 0 || s.title.indexOf('сайт') >= 0 || s.title.indexOf('АНАЛИТИКА') >= 0; });
+
+  // Cards
+  var cardsHtml = '';
+  siteSections.forEach(function(sec) {
+    var visits = sec.fields.find(function(f){ return f.label === 'Визиты'; });
+    var views = sec.fields.find(function(f){ return f.label === 'Просмотры'; });
+    var bounce = sec.fields.find(function(f){ return f.label.indexOf('Отказы') >= 0; });
+    var name = sec.title.replace('САЙТ ', '').replace('АНАЛИТИКА ', '').toLowerCase();
+
+    cardsHtml += '<div class="metric-card">' +
+      '<div class="metric-title">🌐 ' + name + '</div>' +
+      '<div class="metric-value">' + fmt(visits ? visits.current : 0) + '</div>' +
+      '<div class="metric-detail">визитов' +
+        (views ? ' · ' + fmt(views.current) + ' просмотров' : '') +
+        (bounce && bounce.current ? ' · отказы ' + (typeof bounce.current === 'number' && bounce.current < 1 ? (bounce.current * 100).toFixed(1) : bounce.current) + '%' : '') +
+      '</div>' +
+      '</div>';
+  });
+  document.getElementById('sitesCards').innerHTML = cardsHtml;
+
+  // Table
+  var tableHtml = '<thead><tr><th>Домен</th><th class="num">Визиты</th><th class="num">Посетители</th><th class="num">Просмотры</th><th class="num">Отказы</th><th class="num">Глубина</th><th>Изм. визитов</th></tr></thead><tbody>';
+  siteSections.forEach(function(sec) {
+    var v = val(sec,'Визиты'); var p = val(sec,'Посетители'); var pr = val(sec,'Просмотры');
+    var b = val(sec,'Отказы, %'); var d = val(sec,'Глубина просмотра');
+    var visits = sec.fields.find(function(f){ return f.label === 'Визиты'; });
+    var chg = visits && visits.changePercent !== null ? changeBadge(visits.changePercent) : '—';
+
+    var bounceFmt = b;
+    if (typeof b === 'number' && b < 1) bounceFmt = (b * 100).toFixed(1) + '%';
+    else if (typeof b === 'number') bounceFmt = b.toFixed(1) + '%';
+
+    tableHtml += '<tr><td><strong>' + sec.title.replace('САЙТ ','').replace('АНАЛИТИКА ','') + '</strong></td>' +
+      '<td class="num">' + fmt(v) + '</td><td class="num">' + fmt(p) + '</td><td class="num">' + fmt(pr) + '</td>' +
+      '<td class="num">' + bounceFmt + '</td><td class="num">' + (typeof d === 'number' ? d.toFixed(2) : d) + '</td>' +
+      '<td>' + chg + '</td></tr>';
+  });
+  tableHtml += '</tbody>';
+  document.getElementById('sitesTable').innerHTML = tableHtml;
+}
+
+// ── Social ──
+function renderSocial(data) {
+  var sections = data.social ? data.social.sections : [];
+
+  // Table
+  var tableHtml = '<thead><tr><th>Платформа</th><th class="num">Подписчики</th><th>Изменение</th><th class="num">Публикации</th><th>Статус</th></tr></thead><tbody>';
+
+  // Collect and sort by subscribers
+  var platforms = [];
+  sections.forEach(function(sec) {
+    var subs = sec.fields.find(function(f){ return f.label === 'Подписчики'; });
+    var pubs = sec.fields.find(function(f){ return f.label === 'Публикации'; });
+    platforms.push({
+      name: sec.title,
+      subs: subs ? subs.current : 0,
+      subsChange: subs ? subs.changePercent : null,
+      pubs: pubs ? pubs.current : null,
+    });
+  });
+  platforms.sort(function(a,b){ return (b.subs||0) - (a.subs||0); });
+
+  platforms.forEach(function(p, i) {
+    var medal = i === 0 ? '🥇 ' : (i === 1 ? '🥈 ' : (i === 2 ? '🥉 ' : ''));
+    var chg = p.subsChange !== null ? changeBadge(p.subsChange) : '—';
+    var status = '—';
+    if (p.subsChange !== null) {
+      if (p.subsChange > 3) status = '<span class="badge badge-up">Рост</span>';
+      else if (p.subsChange > 0) status = '<span class="badge badge-neutral">Стабильный</span>';
+      else status = '<span class="badge badge-down">Снижение</span>';
+    }
+    tableHtml += '<tr><td>' + medal + p.name + '</td><td class="num">' + fmt(p.subs) + '</td>' +
+      '<td>' + chg + '</td><td class="num">' + (p.pubs !== null ? fmt(p.pubs) : '—') + '</td>' +
+      '<td>' + status + '</td></tr>';
+  });
+  tableHtml += '</tbody>';
+  document.getElementById('socialTable').innerHTML = tableHtml;
+
+  // Bar chart top 5
+  var top5 = platforms.slice(0, 5);
+  new Chart(document.getElementById('socialChart'), {
+    type: 'bar',
+    data: {
+      labels: top5.map(function(p){ return p.name; }),
+      datasets: [{
+        label: 'Подписчики',
+        data: top5.map(function(p){ return p.subs || 0; }),
+        backgroundColor: ['#D4A853', '#C4963F', '#B8862E', '#A07526', '#88641E'],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748B', callback: function(v){ return fmtShort(v); } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { ticks: { color: '#94A3B8', font: { size: 12 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Content ──
+function renderContent(data) {
+  var sections = data.content ? data.content.sections : [];
+  var nl = data.newsletter ? data.newsletter.sections : [];
+
+  // Content table
+  var tableHtml = '<thead><tr><th>Языковая версия</th>';
+  var contentTypes = ['Тексты', 'Видео', 'BBT', 'Life', 'BRICS View', 'Подкасты'];
+  contentTypes.forEach(function(t){ tableHtml += '<th class="num">' + t + '</th>'; });
+  tableHtml += '<th class="num">Итого</th></tr></thead><tbody>';
+
+  var grandTotal = 0;
+  sections.forEach(function(sec) {
+    tableHtml += '<tr><td><strong>' + sec.title + '</strong></td>';
+    var rowTotal = 0;
+    contentTypes.forEach(function(type) {
+      var field = sec.fields.find(function(f){ return f.label === type; });
+      var v = field ? (field.current || 0) : 0;
+      if (typeof v === 'number') rowTotal += v;
+      tableHtml += '<td class="num">' + (v ? fmt(v) : '—') + '</td>';
+    });
+    grandTotal += rowTotal;
+    tableHtml += '<td class="num"><strong>' + fmt(rowTotal) + '</strong></td></tr>';
+  });
+  tableHtml += '<tr style="background:var(--bg-card)"><td><strong>ВСЕГО</strong></td>';
+  contentTypes.forEach(function(){ tableHtml += '<td></td>'; });
+  tableHtml += '<td class="num"><strong>' + fmt(grandTotal) + '</strong></td></tr>';
+  tableHtml += '</tbody>';
+  document.getElementById('contentTable').innerHTML = tableHtml;
+
+  // Newsletter
+  if (nl.length > 0) {
+    var nlHtml = '<thead><tr><th>Показатель</th><th class="num">Значение</th><th>Изменение</th></tr></thead><tbody>';
+    nl.forEach(function(sec) {
+      nlHtml += '<tr><td colspan="3" style="color:var(--accent);font-weight:700">' + sec.title + '</td></tr>';
+      sec.fields.forEach(function(f) {
+        var v = f.current;
+        var display = '—';
+        if (v !== null && v !== undefined) {
+          if (f.type === 'percent' && typeof v === 'number' && v < 1) display = (v * 100).toFixed(1) + '%';
+          else if (f.type === 'percent') display = v.toFixed(1) + '%';
+          else display = fmt(v);
+        }
+        var chg = f.changePercent !== null ? changeBadge(f.changePercent) : '—';
+        nlHtml += '<tr><td>' + f.label + '</td><td class="num">' + display + '</td><td>' + chg + '</td></tr>';
+      });
+    });
+    nlHtml += '</tbody>';
+    document.getElementById('newsletterTable').innerHTML = nlHtml;
+  }
+}
+
+// ── Podcasts & Experts ──
+function renderPodcastsExperts(data) {
+  var podcasts = data.podcasts ? data.podcasts.sections : [];
+  var experts = data.experts ? data.experts.sections : [];
+
+  // KPI cards
+  var kpis = [];
+  var podTotal = 0;
+  podcasts.forEach(function(sec) {
+    sec.fields.forEach(function(f) {
+      if (f.current && typeof f.current === 'number') podTotal += f.current;
+    });
+  });
+  if (podTotal > 0) kpis.push({ label: '🎧 Прослушивания (всего)', value: podTotal, change: null });
+
+  experts.forEach(function(sec) {
+    sec.fields.forEach(function(f) {
+      if (f.current !== null && f.current !== undefined) {
+        kpis.push({ label: '👤 ' + f.label, value: f.current, change: f.changePercent });
+      }
+    });
+  });
+
+  var kpiHtml = '';
+  kpis.forEach(function(kpi) {
+    var changeHtml = '';
+    if (kpi.change !== null && kpi.change !== undefined) {
+      var dir = kpi.change >= 0 ? 'up' : 'down';
+      var arrow = kpi.change >= 0 ? '↗' : '↘';
+      changeHtml = '<div class="kpi-change ' + dir + '">' + arrow + ' ' + (kpi.change >= 0 ? '+' : '') + kpi.change.toFixed(1) + '%</div>';
+    }
+    kpiHtml += '<div class="kpi-card"><div class="kpi-label">' + kpi.label + '</div>' +
+               '<div class="kpi-value">' + fmt(kpi.value) + '</div>' + changeHtml + '</div>';
+  });
+  document.getElementById('podcastsExpertsKPI').innerHTML = kpiHtml;
+
+  // Podcasts table
+  if (podcasts.length > 0) {
+    var ptHtml = '<thead><tr><th>Языковая версия</th><th class="num">Прослушивания</th><th>Изменение</th></tr></thead><tbody>';
+    podcasts.forEach(function(sec) {
+      sec.fields.forEach(function(f) {
+        var chg = f.changePercent !== null ? changeBadge(f.changePercent) : '—';
+        ptHtml += '<tr><td>' + f.label + '</td><td class="num">' + fmt(f.current) + '</td><td>' + chg + '</td></tr>';
+      });
+    });
+    ptHtml += '<tr style="background:var(--bg-card)"><td><strong>ВСЕГО</strong></td>' +
+      '<td class="num"><strong>' + fmt(podTotal) + '</strong></td><td></td></tr>';
+    ptHtml += '</tbody>';
+    document.getElementById('podcastsTable').innerHTML = ptHtml;
+  }
+
+  // Experts table
+  if (experts.length > 0) {
+    var exHtml = '<thead><tr><th>Показатель</th><th class="num">Значение</th><th>Изменение</th></tr></thead><tbody>';
+    experts.forEach(function(sec) {
+      sec.fields.forEach(function(f) {
+        var chg = f.changePercent !== null ? changeBadge(f.changePercent) : '—';
+        exHtml += '<tr><td>' + f.label + '</td><td class="num">' + fmt(f.current) + '</td><td>' + chg + '</td></tr>';
+      });
+    });
+    exHtml += '</tbody>';
+    document.getElementById('expertsTable').innerHTML = exHtml;
+  }
+}
+
+// ── Partners ──
+function renderPartners(data) {
+  var partners = data.partners ? data.partners.partners : [];
+  var citations = data.citations || {};
+
+  // Partners table
+  if (partners.length > 0) {
+    var ptHtml = '<thead><tr><th>Партнёр</th><th class="num">Публикации</th><th>Изменение</th></tr></thead><tbody>';
+    partners.sort(function(a,b){ return (b.total||0) - (a.total||0); });
+    partners.forEach(function(p, i) {
+      var medal = i < 3 ? ['🥇','🥈','🥉'][i] + ' ' : '';
+      var chg = p.changePercent ? changeBadge(p.changePercent) : (p.change !== null && p.change !== undefined ? changeBadgeAbs(p.change) : '—');
+      ptHtml += '<tr><td>' + medal + p.name + '</td><td class="num">' + fmt(p.total) + '</td><td>' + chg + '</td></tr>';
+    });
+    ptHtml += '</tbody>';
+    document.getElementById('partnersTable').innerHTML = ptHtml;
+  }
+
+  // News Partners
+  var newsPt = data.newsPartners;
+  if (newsPt && newsPt.agencies && newsPt.agencies.length > 0) {
+    var npHtml = '<thead><tr><th>Агентство</th><th class="num">Публикации</th></tr></thead><tbody>';
+    var sorted = newsPt.agencies.filter(function(a){ return a.current && a.current > 0; })
+      .sort(function(a,b){ return (b.current||0) - (a.current||0); });
+    sorted.forEach(function(a, i) {
+      var medal = i < 3 ? ['🥇','🥈','🥉'][i] + ' ' : '';
+      npHtml += '<tr><td>' + medal + a.name + '</td><td class="num">' + fmt(a.current) + '</td></tr>';
+    });
+    npHtml += '<tr style="background:var(--bg-card)"><td><strong>ВСЕГО</strong></td>' +
+      '<td class="num"><strong>' + fmt(newsPt.total) + '</strong></td></tr>';
+    npHtml += '</tbody>';
+    document.getElementById('newsPartnersTable').innerHTML = npHtml;
+  }
+
+  // Citations - site
+  if (citations.site && citations.site.length > 0) {
+    var csHtml = '<thead><tr><th>Показатель</th><th class="num">Текущий</th><th class="num">Предыдущий</th><th>Изменение</th></tr></thead><tbody>';
+    citations.site.forEach(function(f) {
+      csHtml += '<tr><td>' + f.label + '</td><td class="num">' + fmt(f.current) + '</td>' +
+        '<td class="num">' + fmt(f.previous) + '</td><td>' + changeBadgeAbs(f.change) + '</td></tr>';
+    });
+    csHtml += '</tbody>';
+    document.getElementById('citSiteTable').innerHTML = csHtml;
+  }
+
+  // Citations - social
+  if (citations.social && citations.social.length > 0) {
+    var csoHtml = '<thead><tr><th>Соцсеть</th><th class="num">Упоминания</th><th>Изменение</th></tr></thead><tbody>';
+    citations.social.sort(function(a,b){ return (b.current||0) - (a.current||0); });
+    citations.social.forEach(function(f) {
+      csoHtml += '<tr><td>' + f.label + '</td><td class="num">' + fmt(f.current) + '</td>' +
+        '<td>' + changeBadgeAbs(f.change) + '</td></tr>';
+    });
+    csoHtml += '</tbody>';
+    document.getElementById('citSocialTable').innerHTML = csoHtml;
+  }
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  if (typeof n !== 'number') return String(n);
+  return n.toLocaleString('ru-RU');
+}
+function fmtShort(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(0) + 'K';
+  return n;
+}
+function formatDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+}
+function findField(sections, sectionTitle, fieldLabel) {
+  var sec = sections.find(function(s){ return s.title === sectionTitle; });
+  if (!sec) return null;
+  return sec.fields.find(function(f){ return f.label === fieldLabel; }) || null;
+}
+function findFieldDirect(arr, label) {
+  if (!arr) return null;
+  return arr.find(function(f){ return f.label === label; }) || null;
+}
+function val(sec, label) {
+  var f = sec.fields.find(function(fi){ return fi.label === label; });
+  return f ? f.current : null;
+}
+function changeBadge(pct) {
+  if (pct === null || pct === undefined) return '—';
+  var cls = pct >= 0 ? 'badge-up' : 'badge-down';
+  var arrow = pct >= 0 ? '↗' : '↘';
+  return '<span class="badge ' + cls + '">' + arrow + ' ' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%</span>';
+}
+function changeBadgeAbs(n) {
+  if (n === null || n === undefined) return '—';
+  var cls = n >= 0 ? 'badge-up' : 'badge-down';
+  var arrow = n >= 0 ? '↗' : '↘';
+  return '<span class="badge ' + cls + '">' + arrow + ' ' + (n >= 0 ? '+' : '') + fmt(n) + '</span>';
+}
+
+// ═══════════════════════════════════════════
+// ANIMATIONS
+// ═══════════════════════════════════════════
+function animateCountUp() {
+  document.querySelectorAll('.kpi-value[data-target]').forEach(function(el) {
+    var target = parseFloat(el.dataset.target);
+    if (isNaN(target)) return;
+    var duration = 1200;
+    var start = 0;
+    var startTime = null;
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      // easeOutExpo
+      var ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      var current = Math.round(start + (target - start) * ease);
+      el.textContent = current.toLocaleString('ru-RU');
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(target);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+// ═══════════════════════════════════════════
+// DEMO DATA (используется если API_URL пуст)
+// ═══════════════════════════════════════════
+function getDemoData() {
+  return {
+    meta: {
+      currentMonth: 'мар26',
+      prevMonth: 'фев26',
+      periodTitle: 'Март 2026',
+      months: ['апр25','май25','июн25','июл25','авг25','сен25','окт25','ноя25','дек25','янв26','фев26','мар26'],
+      updatedAt: new Date().toISOString()
+    },
+    sites: { sections: [
+      { title: 'САЙТ TVBRICS.COM', fields: [
+        { label: 'Визиты', current: 549386, previous: 2170567, changePercent: -74.7, values: {
+          'апр25':260893,'май25':115003,'июн25':98056,'июл25':135389,'авг25':137619,'сен25':130789,
+          'окт25':155385,'ноя25':175712,'дек25':387476,'янв26':1442239,'фев26':2170567,'мар26':549386 }},
+        { label: 'Посетители', current: 39581, previous: 1717146, changePercent: -97.7, values: {
+          'апр25':0,'май25':0,'июн25':75919,'июл25':105078,'авг25':109298,'сен25':108818,
+          'окт25':126700,'ноя25':145907,'дек25':357529,'янв26':1169572,'фев26':1717146,'мар26':39581 }},
+        { label: 'Просмотры', current: 342, previous: 2361158, changePercent: -100, values: {
+          'апр25':0,'май25':0,'июн25':151823,'июл25':237207,'авг25':222025,'сен25':215607,
+          'окт25':254956,'ноя25':278333,'дек25':496405,'янв26':1581685,'фев26':2361158,'мар26':342 }},
+        { label: 'Отказы, %', current: 0.333, previous: 0.613, changePercent: -45.7, values: {} },
+        { label: 'Глубина просмотра', current: 1.81, previous: 1.09, changePercent: 66.1, values: {} }
+      ]},
+      { title: 'ГЕОГРАФИЯ TVBRICS.COM', fields: [
+        { label: 'Россия, %', current: 0.05, previous: 0.599, values: {} },
+        { label: 'Бразилия, %', current: 0.05, previous: 0.001, values: {} },
+        { label: 'Китай, %', current: 0.052, previous: 0.001, values: {} },
+        { label: 'ЮАР, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Индия, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Египет, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'ОАЭ, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Саудовская Аравия, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Эфиопия, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Иран, %', current: 0.022, previous: 0.001, values: {} },
+        { label: 'Индонезия, %', current: -0.023, previous: 0.001, values: {} },
+      ]},
+      { title: 'САЙТ OSHIBOK-NET.RU', fields: [
+        { label: 'Визиты', current: 111, previous: 65623, changePercent: -99.8, values: {} },
+        { label: 'Посетители', current: 111, previous: 58425, changePercent: -99.8, values: {} },
+        { label: 'Просмотры', current: 222, previous: 82176, changePercent: -99.7, values: {} },
+        { label: 'Отказы, %', current: 0.0333, previous: 0.281, values: {} },
+        { label: 'Глубина просмотра', current: 1.81, previous: 1.25, values: {} }
+      ]},
+      { title: 'САЙТ TVBRICS-ORCHESTRA.COM', fields: [
+        { label: 'Визиты', current: 4444, previous: 308, changePercent: 1342.9, values: {} },
+        { label: 'Посетители', current: 3800, previous: 290, changePercent: 1210.3, values: {} },
+        { label: 'Просмотры', current: 12300, previous: 939, changePercent: 1210.0, values: {} },
+        { label: 'Отказы, %', current: 0.11, previous: 0.127, values: {} },
+        { label: 'Глубина просмотра', current: 2.8, previous: 3.05, values: {} },
+        { label: 'Время на сайте', current: '1:45', previous: '2:10', values: {} }
+      ]},
+      { title: 'АНАЛИТИКА BRICS-MEDIA.COM', fields: [
+        { label: 'Визиты', current: 8200, previous: 7500, changePercent: 9.3, values: {} },
+        { label: 'Посетители', current: 6800, previous: 6200, changePercent: 9.7, values: {} },
+        { label: 'Просмотры', current: 15400, previous: 14100, changePercent: 9.2, values: {} },
+        { label: 'Отказы, %', current: 0.42, previous: 0.45, values: {} },
+        { label: 'Глубина просмотра', current: 1.88, previous: 1.79, values: {} },
+        { label: 'Время на сайте', current: '2:12', previous: '1:58', values: {} },
+        { label: 'Контент', current: 340, previous: 310, changePercent: 9.7, values: {} }
+      ]}
+    ]},
+    social: { sections: [
+      { title: 'YouTube', fields: [
+        { label: 'Публикации', current: 50, previous: 45, changePercent: 11.1, values: {} },
+        { label: 'Просмотры (нараст.)', current: 10823000, previous: 10702000, changePercent: 1.1, values: {} },
+        { label: 'Подписчики', current: 39464, previous: 39114, changePercent: 0.9, values: {} }
+      ]},
+      { title: 'Rutube', fields: [
+        { label: 'Публикации', current: 36, previous: 19, changePercent: 89.5, values: {} },
+        { label: 'Просмотры эфир', current: 0, previous: 0, changePercent: null, values: {} },
+        { label: 'Просмотры видео', current: 0, previous: 0, changePercent: null, values: {} },
+        { label: 'Просмотры (нараст.)', current: 509868, previous: 484123, changePercent: 5.3, values: {} },
+        { label: 'Подписчики', current: 1912, previous: 1844, changePercent: 3.7, values: {} }
+      ]},
+      { title: 'Youku', fields: [
+        { label: 'Публикации', current: 0, previous: 0, changePercent: null, values: {} },
+        { label: 'Подписчики', current: 0, previous: 0, changePercent: null, values: {} }
+      ]},
+      { title: 'Telegram', fields: [
+        { label: 'Публикации', current: 336, previous: 312, changePercent: 7.7, values: {} },
+        { label: 'Просмотры', current: 450136, previous: 576955, changePercent: -22.0, values: {} },
+        { label: 'Подписчики', current: 13876, previous: 11110, changePercent: 24.9, values: {} }
+      ]},
+      { title: 'VK', fields: [
+        { label: 'Публикации', current: 324, previous: 326, changePercent: -0.6, values: {} },
+        { label: 'Охват', current: 87837, previous: 72392, changePercent: 21.3, values: {} },
+        { label: 'Подписчики', current: 17221, previous: 16785, changePercent: 2.6, values: {} }
+      ]},
+      { title: 'VK Видео', fields: [
+        { label: 'Просмотры Клипы', current: 83072, previous: 56167, changePercent: 47.9, values: {} },
+        { label: 'Просмотры Видео', current: 31141, previous: 27865, changePercent: 11.8, values: {} }
+      ]},
+      { title: 'ОК', fields: [
+        { label: 'Публикации', current: 324, previous: 304, changePercent: 6.6, values: {} },
+        { label: 'Просмотры', current: 203855, previous: 204201, changePercent: -0.2, values: {} },
+        { label: 'Подписчики', current: 6508, previous: 6451, changePercent: 0.9, values: {} }
+      ]},
+      { title: 'Facebook', fields: [
+        { label: 'Публикации', current: 318, previous: 299, changePercent: 6.4, values: {} },
+        { label: 'Охват', current: 14140, previous: 8938, changePercent: 58.2, values: {} },
+        { label: 'Подписчики', current: 1634, previous: 1624, changePercent: 0.6, values: {} }
+      ]},
+      { title: 'Instagram', fields: [
+        { label: 'Публикации', current: 165, previous: 124, changePercent: 33.1, values: {} },
+        { label: 'Охват', current: 15175, previous: 9204, changePercent: 64.9, values: {} },
+        { label: 'Подписчики', current: 13395, previous: 13380, changePercent: 0.1, values: {} }
+      ]},
+      { title: 'Яндекс Дзен', fields: [
+        { label: 'Публикации', current: 270, previous: 251, changePercent: 7.6, values: {} },
+        { label: 'Просмотры', current: 95000, previous: 88000, changePercent: 8.0, values: {} },
+        { label: 'Видео', current: 25, previous: 20, changePercent: 25.0, values: {} },
+        { label: 'Просмотры видео', current: 12000, previous: 9500, changePercent: 26.3, values: {} },
+        { label: 'Подписчики', current: 4200, previous: 4100, changePercent: 2.4, values: {} }
+      ]},
+      { title: 'Twitter/X', fields: [
+        { label: 'Публикации', current: 180, previous: 165, changePercent: 9.1, values: {} },
+        { label: 'Подписчики', current: 8900, previous: 8800, changePercent: 1.1, values: {} }
+      ]},
+      { title: 'TikTok', fields: [
+        { label: 'Публикации', current: 35, previous: 30, changePercent: 16.7, values: {} },
+        { label: 'Просмотры', current: 3200000, previous: 2800000, changePercent: 14.3, values: {} },
+        { label: 'Подписчики', current: 52000, previous: 49900, changePercent: 4.2, values: {} }
+      ]}
+    ]},
+    content: { sections: [
+      { title: 'РУССКАЯ ВЕРСИЯ', fields: [
+        { label: 'Тексты', current: 120, values: {} },
+        { label: 'Видео', current: 45, values: {} },
+        { label: 'BBT', current: 12, values: {} },
+        { label: 'Life', current: 8, values: {} },
+        { label: 'BRICS View', current: 5, values: {} },
+        { label: 'Подкасты', current: 3, values: {} }
+      ]},
+      { title: 'АНГЛИЙСКАЯ ВЕРСИЯ', fields: [
+        { label: 'Тексты', current: 85, values: {} },
+        { label: 'Видео', current: 30, values: {} },
+        { label: 'BBT', current: 8, values: {} },
+        { label: 'Подкасты', current: 2, values: {} },
+        { label: 'Life', current: 5, values: {} }
+      ]}
+    ]},
+    newsletter: { sections: [
+      { title: 'ПОДПИСЧИКИ', fields: [
+        { label: 'Push рассылка', current: 15000, previous: 14500, changePercent: 3.4, type: 'number', values: {} },
+        { label: 'E-mail (рус)', current: 8500, previous: 8200, changePercent: 3.7, type: 'number', values: {} }
+      ]},
+      { title: 'ОТКРЫТИЯ ДАЙДЖЕСТА', fields: [
+        { label: 'Дайджест (рус)', current: 0.245, previous: 0.230, changePercent: 6.5, type: 'percent', values: {} }
+      ]}
+    ]},
+    podcasts: { sections: [
+      { title: 'ПРОСЛУШИВАНИЯ', fields: [
+        { label: 'Русская', current: 1250, previous: 1100, changePercent: 13.6, values: {} },
+        { label: 'Английская', current: 800, previous: 750, changePercent: 6.7, values: {} },
+        { label: 'Испанская', current: 340, previous: 310, changePercent: 9.7, values: {} },
+        { label: 'Португальская', current: 290, previous: 270, changePercent: 7.4, values: {} }
+      ]}
+    ]},
+    experts: { sections: [
+      { title: 'СТАТИСТИКА ПРОЕКТА «ЭКСПЕРТЫ»', fields: [
+        { label: 'Новые эксперты за месяц', current: 12, previous: 8, changePercent: 50.0, values: {} },
+        { label: 'Материалы с экспертами', current: 45, previous: 38, changePercent: 18.4, values: {} }
+      ]}
+    ]},
+    newsPartners: {
+      agencies: [
+        { name: 'Xinhua', current: 28, previous: 25 },
+        { name: 'China Daily', current: 22, previous: 19 },
+        { name: 'CGTN', current: 18, previous: 15 },
+        { name: 'ANI', current: 15, previous: 12 },
+        { name: 'Prensa Latina', current: 14, previous: 10 }
+      ],
+      total: 97, prevTotal: 81, change: 16, changePercent: 19.8
+    },
+    partners: { partners: [
+      { name: 'ANI', total: 61, prevTotal: 54, change: 7, changePercent: 13.0, versions: [] },
+      { name: 'Prensa Latina', total: 84, prevTotal: 57, change: 27, changePercent: 47.4, versions: [] },
+      { name: 'Brasil247', total: 59, prevTotal: 28, change: 31, changePercent: 110.7, versions: [] },
+      { name: 'Xinhua', total: 54, prevTotal: 48, change: 6, changePercent: 12.5, versions: [] },
+      { name: 'ZBC news', total: 7, prevTotal: 5, change: 2, changePercent: 40.0, versions: [] }
+    ]},
+    citations: {
+      site: [
+        { label: 'Российские СМИ', current: 305, previous: 300, change: 5 },
+        { label: 'Зарубежные СМИ', current: 771, previous: 728, change: 43 },
+        { label: 'Всего цитат за месяц', current: 1119, previous: 1028, change: 91 },
+        { label: 'Кол-во цитат за все время', current: 27914, previous: 26795, change: 1119 }
+      ],
+      social: [
+        { label: 'ВКОНТАКТЕ', current: 2501, previous: 236, change: 2265 },
+        { label: 'TELEGRAM', current: 1596, previous: 112, change: 1484 },
+        { label: 'ОДНОКЛАССНИКИ', current: 927, previous: 51, change: 876 },
+        { label: 'ДЗЕН', current: 319, previous: 9, change: 310 },
+        { label: 'TWITTER', current: 147, previous: 36, change: 111 }
+      ]
+    }
+  };
+}
+</script>
+</body>
+</html>
