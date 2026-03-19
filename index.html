@@ -87,6 +87,41 @@ body {
   transform: rotate(180deg);
 }
 
+/* ── Period selector ── */
+.period-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.period-selector label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.period-selector select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 6px 32px 6px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394A3B8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s;
+}
+.period-selector select:hover,
+.period-selector select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 /* ── Tabs ── */
 .tabs {
   display: flex;
@@ -369,6 +404,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
       Обновлено: <span id="updatedAt">—</span>
       <button class="refresh-btn" onclick="location.reload()" title="Обновить данные">&#x21bb;</button>
     </div>
+    <div class="period-selector">
+      <label for="periodSelect">Период:</label>
+      <select id="periodSelect"></select>
+    </div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -414,6 +453,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
       <div class="card-title">📈 Топ-5 по подписчикам</div>
       <div class="chart-wrap" style="height:260px"><canvas id="socialChart"></canvas></div>
     </div>
+    <div class="card">
+      <div class="card-title">📈 Динамика подписчиков по месяцам</div>
+      <div class="chart-wrap"><canvas id="socialDynamicsChart"></canvas></div>
+    </div>
   </div>
 
   <!-- ═══ КОНТЕНТ ═══ -->
@@ -421,6 +464,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
     <div class="card">
       <div class="card-title">📝 Производство контента по языковым версиям</div>
       <div style="overflow-x:auto"><table id="contentTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Контент по типам и языковым версиям</div>
+      <div class="chart-wrap"><canvas id="contentChart"></canvas></div>
     </div>
     <div class="card" id="newsletterCard">
       <div class="card-title">📧 Рассылка</div>
@@ -459,6 +506,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
       <div class="card-title">📱 Цитируемость — Соцсети</div>
       <div style="overflow-x:auto"><table id="citSocialTable"></table></div>
     </div>
+    <div class="card">
+      <div class="card-title">📈 Тренд цитируемости (СМИ)</div>
+      <div class="chart-wrap"><canvas id="citationTrendChart"></canvas></div>
+    </div>
   </div>
 
   <!-- ═══ Footer ═══ -->
@@ -481,6 +532,12 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzHedbOcW0uZH9nvMlnq9T9
 const DEMO_MODE = !API_URL;
 
 // ═══════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════
+var _rawData = null;           // Исходные данные из API
+var _chartInstances = {};      // Хранилище Chart.js инстансов для уничтожения при перерисовке
+
+// ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async function() {
@@ -494,6 +551,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   });
 
+  // Period selector change handler
+  document.getElementById('periodSelect').addEventListener('change', function() {
+    if (!_rawData) return;
+    var selectedMonth = this.value;
+    var viewData = buildViewData(_rawData, selectedMonth);
+    destroyAllCharts();
+    renderDashboard(viewData);
+    setTimeout(animateCountUp, 100);
+  });
+
   try {
     var data;
     if (DEMO_MODE) {
@@ -503,6 +570,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       data = await resp.json();
     }
+    _rawData = data;
+    populatePeriodSelector(data.meta.months);
     renderDashboard(data);
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
@@ -513,6 +582,122 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('errorMessage').textContent = e.message;
   }
 });
+
+// ═══════════════════════════════════════════
+// PERIOD SELECTOR
+// ═══════════════════════════════════════════
+
+/** Заполняет dropdown списком месяцев */
+function populatePeriodSelector(months) {
+  var select = document.getElementById('periodSelect');
+  var monthNames = {
+    'янв':'Январь','фев':'Февраль','мар':'Март','апр':'Апрель',
+    'май':'Май','июн':'Июнь','июл':'Июль','авг':'Август',
+    'сен':'Сентябрь','окт':'Октябрь','ноя':'Ноябрь','дек':'Декабрь'
+  };
+  var html = '';
+  // Показываем месяцы от последнего к первому
+  for (var i = months.length - 1; i >= 0; i--) {
+    var m = months[i];
+    var label = m;
+    // "мар26" → "Март 2026"
+    var match = m.match(/^([а-яё]+)(\d{2})$/i);
+    if (match) {
+      var name = monthNames[match[1].toLowerCase()] || match[1];
+      label = name + ' 20' + match[2];
+    }
+    var selected = (i === months.length - 1) ? ' selected' : '';
+    html += '<option value="' + m + '"' + selected + '>' + label + '</option>';
+  }
+  select.innerHTML = html;
+}
+
+/**
+ * Строит данные для конкретного выбранного месяца.
+ * Пересчитывает current/previous/change/changePercent для всех полей.
+ */
+function buildViewData(raw, selectedMonth) {
+  var months = raw.meta.months;
+  var idx = months.indexOf(selectedMonth);
+  if (idx < 0) return raw;
+  var prevMonth = idx > 0 ? months[idx - 1] : null;
+
+  // Человекочитаемый заголовок
+  var monthNames = {
+    'янв':'Январь','фев':'Февраль','мар':'Март','апр':'Апрель',
+    'май':'Май','июн':'Июнь','июл':'Июль','авг':'Август',
+    'сен':'Сентябрь','окт':'Октябрь','ноя':'Ноябрь','дек':'Декабрь'
+  };
+  var periodTitle = selectedMonth;
+  var match = selectedMonth.match(/^([а-яё]+)(\d{2})$/i);
+  if (match) {
+    var name = monthNames[match[1].toLowerCase()] || match[1];
+    periodTitle = name + ' 20' + match[2];
+  }
+
+  // Глубокая копия
+  var data = JSON.parse(JSON.stringify(raw));
+  data.meta.currentMonth = selectedMonth;
+  data.meta.prevMonth = prevMonth;
+  data.meta.periodTitle = periodTitle;
+
+  // Пересчитать current/previous для всех секций
+  var sheetKeys = ['sites', 'social', 'content', 'newsletter', 'podcasts', 'experts'];
+  sheetKeys.forEach(function(key) {
+    if (!data[key] || !data[key].sections) return;
+    data[key].sections.forEach(function(sec) {
+      sec.fields.forEach(function(f) {
+        f.current = f.values[selectedMonth] !== undefined ? f.values[selectedMonth] : null;
+        f.previous = prevMonth && f.values[prevMonth] !== undefined ? f.values[prevMonth] : null;
+        f.change = null;
+        f.changePercent = null;
+        if (f.current !== null && f.previous !== null &&
+            typeof f.current === 'number' && typeof f.previous === 'number') {
+          f.change = f.current - f.previous;
+          if (f.previous !== 0) {
+            f.changePercent = (f.current / f.previous - 1) * 100;
+          }
+        }
+      });
+    });
+  });
+
+  // Partners — пересчитать totals
+  if (data.partners && data.partners.partners) {
+    data.partners.partners.forEach(function(p) {
+      // У партнёров нет values по месяцам в текущем API, оставляем как есть
+    });
+  }
+
+  // Citations
+  if (data.citations) {
+    ['site', 'social'].forEach(function(sub) {
+      if (!data.citations[sub]) return;
+      data.citations[sub].forEach(function(f) {
+        if (f.values) {
+          f.current = f.values[selectedMonth] !== undefined ? f.values[selectedMonth] : null;
+          f.previous = prevMonth && f.values[prevMonth] !== undefined ? f.values[prevMonth] : null;
+          f.change = null;
+          if (f.current !== null && f.previous !== null) {
+            f.change = f.current - f.previous;
+          }
+        }
+      });
+    });
+  }
+
+  return data;
+}
+
+/** Уничтожает все Chart.js инстансы перед перерисовкой */
+function destroyAllCharts() {
+  Object.keys(_chartInstances).forEach(function(key) {
+    if (_chartInstances[key]) {
+      _chartInstances[key].destroy();
+      _chartInstances[key] = null;
+    }
+  });
+}
 
 // ═══════════════════════════════════════════
 // RENDER
@@ -611,7 +796,7 @@ function renderTrafficChart(data) {
   var visits = last12.map(function(m){ return visitsField.values[m] || 0; });
   var views = last12.map(function(m){ return viewsField ? (viewsField.values[m] || 0) : 0; });
 
-  new Chart(document.getElementById('trafficChart'), {
+  _chartInstances.traffic = new Chart(document.getElementById('trafficChart'), {
     type: 'line',
     data: {
       labels: labels,
@@ -741,7 +926,7 @@ function renderSocial(data) {
 
   // Bar chart top 5
   var top5 = platforms.slice(0, 5);
-  new Chart(document.getElementById('socialChart'), {
+  _chartInstances.socialBar = new Chart(document.getElementById('socialChart'), {
     type: 'bar',
     data: {
       labels: top5.map(function(p){ return p.name; }),
@@ -758,6 +943,53 @@ function renderSocial(data) {
       scales: {
         x: { ticks: { color: '#64748B', callback: function(v){ return fmtShort(v); } }, grid: { color: 'rgba(148,163,184,0.08)' } },
         y: { ticks: { color: '#94A3B8', font: { size: 12 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Dynamics chart — subscriber trends over months
+  renderSocialDynamics(data);
+}
+
+function renderSocialDynamics(data) {
+  var sections = data.social ? data.social.sections : [];
+  var months = data.meta.months;
+  var last12 = months.slice(-12);
+
+  // Берём топ-5 платформ по текущим подписчикам, у которых есть values
+  var platformsWithData = [];
+  sections.forEach(function(sec) {
+    var subsField = sec.fields.find(function(f){ return f.label === 'Подписчики'; });
+    if (subsField && subsField.values && Object.keys(subsField.values).length > 0) {
+      platformsWithData.push({ name: sec.title, field: subsField, current: subsField.current || 0 });
+    }
+  });
+  platformsWithData.sort(function(a,b){ return (b.current||0) - (a.current||0); });
+  var top5 = platformsWithData.slice(0, 5);
+  if (top5.length === 0) return;
+
+  var colors = ['#D4A853', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6'];
+  var datasets = top5.map(function(p, i) {
+    return {
+      label: p.name,
+      data: last12.map(function(m){ return p.field.values[m] || null; }),
+      borderColor: colors[i],
+      backgroundColor: 'transparent',
+      tension: 0.3,
+      pointRadius: 3,
+      pointBackgroundColor: colors[i],
+    };
+  });
+
+  _chartInstances.socialDynamics = new Chart(document.getElementById('socialDynamicsChart'), {
+    type: 'line',
+    data: { labels: last12, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#94A3B8', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#64748B', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { ticks: { color: '#64748B', callback: function(v){ return fmtShort(v); } }, grid: { color: 'rgba(148,163,184,0.08)' } }
       }
     }
   });
@@ -793,6 +1025,9 @@ function renderContent(data) {
   tableHtml += '</tbody>';
   document.getElementById('contentTable').innerHTML = tableHtml;
 
+  // Stacked bar chart — контент по типам и языковым версиям
+  renderContentChart(data);
+
   // Newsletter
   if (nl.length > 0) {
     var nlHtml = '<thead><tr><th>Показатель</th><th class="num">Значение</th><th>Изменение</th></tr></thead><tbody>';
@@ -813,6 +1048,43 @@ function renderContent(data) {
     nlHtml += '</tbody>';
     document.getElementById('newsletterTable').innerHTML = nlHtml;
   }
+}
+
+function renderContentChart(data) {
+  var sections = data.content ? data.content.sections : [];
+  if (sections.length === 0) return;
+
+  var contentTypes = ['Тексты', 'Видео', 'BBT', 'Life', 'BRICS View', 'Подкасты'];
+  var colors = ['#D4A853', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444'];
+  var labels = sections.map(function(s){ return s.title.replace(' ВЕРСИЯ',''); });
+
+  var datasets = contentTypes.map(function(type, i) {
+    return {
+      label: type,
+      data: sections.map(function(sec) {
+        var f = sec.fields.find(function(fi){ return fi.label === type; });
+        return f && f.current ? f.current : 0;
+      }),
+      backgroundColor: colors[i],
+      borderRadius: 4,
+    };
+  });
+
+  _chartInstances.content = new Chart(document.getElementById('contentChart'), {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94A3B8', font: { size: 11 } } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#64748B' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+      }
+    }
+  });
 }
 
 // ── Podcasts & Experts ──
@@ -936,6 +1208,51 @@ function renderPartners(data) {
     csoHtml += '</tbody>';
     document.getElementById('citSocialTable').innerHTML = csoHtml;
   }
+
+  // Citation trend chart
+  renderCitationTrend(data);
+}
+
+function renderCitationTrend(data) {
+  var citations = data.citations || {};
+  var months = data.meta.months;
+  var last12 = months.slice(-12);
+
+  // Ищем поле "Всего цитат за месяц" в citations.site с values
+  var totalField = null;
+  if (citations.site) {
+    totalField = citations.site.find(function(f){ return f.label === 'Всего цитат за месяц' && f.values; });
+  }
+  if (!totalField) return;
+
+  var values = last12.map(function(m){ return totalField.values[m] || null; });
+
+  _chartInstances.citationTrend = new Chart(document.getElementById('citationTrendChart'), {
+    type: 'line',
+    data: {
+      labels: last12,
+      datasets: [{
+        label: 'Цитирования за месяц',
+        data: values,
+        borderColor: '#D4A853',
+        backgroundColor: 'rgba(212,168,83,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 5,
+        pointBackgroundColor: '#D4A853',
+        pointBorderColor: '#0C1220',
+        pointBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748B', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { ticks: { color: '#64748B', callback: function(v){ return fmtShort(v); } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+      }
+    }
+  });
 }
 
 // ═══════════════════════════════════════════
