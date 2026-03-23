@@ -282,7 +282,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   white-space: nowrap;
   padding: 0 8px;
 }
-.geo-label-inside { position: absolute; right: 8px; color: var(--bg-primary); }
 .geo-label-outside { color: var(--text-secondary); margin-left: 8px; }
 
 /* ── Metrics grid ── */
@@ -868,17 +867,10 @@ function renderGeo(data) {
   items.forEach(function(item) {
     var pct = Math.max(1, (item.value / maxVal) * 100);
     var labelText = item.value.toFixed(1) + '%';
-    // Если полоска узкая — текст снаружи справа, иначе внутри
-    var labelHtml;
-    if (pct < 20) {
-      labelHtml = '<span class="geo-label geo-label-outside">' + labelText + '</span>';
-    } else {
-      labelHtml = '';
-    }
-    var insideLabel = pct >= 20 ? '<span class="geo-label geo-label-inside">' + labelText + '</span>' : '';
     html += '<div class="geo-item">' +
       '<div class="geo-country">' + item.flag + ' ' + item.name + '</div>' +
-      '<div class="geo-bar"><div class="geo-fill" style="width:' + pct + '%"></div>' + insideLabel + labelHtml + '</div>' +
+      '<div class="geo-bar"><div class="geo-fill" style="width:' + pct + '%"></div>' +
+      '<span class="geo-label geo-label-outside">' + labelText + '</span></div>' +
       '</div>';
   });
   document.getElementById('geoGrid').innerHTML = html;
