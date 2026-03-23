@@ -526,7 +526,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 // ═══════════════════════════════════════════
 
 // ⚠️ ВСТАВЬТЕ URL ВАШЕГО APPS SCRIPT WEB APP СЮДА:
-const API_URL = 'https://script.google.com/macros/s/AKfycbzHedbOcW0uZH9nvMlnq9T93vomTvYD6x7y0hsTdMBmGSFCvtA0o0z5ECmMfzmnngvO/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwchAFizh6gC5eevMauPrbwj6vHJSVJGrZaU6jnafEdTvCYb_TPCCEjDVHJp8RbE8S6/exec';
 
 // Если API_URL пуст — используем демо-режим с тестовыми данными
 const DEMO_MODE = !API_URL;
@@ -662,11 +662,42 @@ function buildViewData(raw, selectedMonth) {
     });
   });
 
-  // Partners — пересчитать totals
+  // Partners — пересчитать totals из values по выбранному месяцу
   if (data.partners && data.partners.partners) {
     data.partners.partners.forEach(function(p) {
-      // У партнёров нет values по месяцам в текущем API, оставляем как есть
+      var total = 0;
+      var prevTotal = 0;
+      p.versions.forEach(function(v) {
+        if (v.values) {
+          v.current = v.values[selectedMonth] !== undefined ? v.values[selectedMonth] : null;
+          v.previous = prevMonth && v.values[prevMonth] !== undefined ? v.values[prevMonth] : null;
+          if (v.current !== null) total += v.current;
+          if (v.previous !== null) prevTotal += v.previous;
+        }
+      });
+      p.total = total;
+      p.prevTotal = prevTotal;
+      p.change = total - prevTotal;
+      p.changePercent = prevTotal > 0 ? (total / prevTotal - 1) * 100 : null;
     });
+  }
+
+  // NewsPartners — пересчитать из values по выбранному месяцу
+  if (data.newsPartners && data.newsPartners.agencies) {
+    var grandTotal = 0;
+    var grandPrevTotal = 0;
+    data.newsPartners.agencies.forEach(function(a) {
+      if (a.values) {
+        a.current = a.values[selectedMonth] !== undefined ? a.values[selectedMonth] : null;
+        a.previous = prevMonth && a.values[prevMonth] !== undefined ? a.values[prevMonth] : null;
+        if (a.current !== null) grandTotal += a.current;
+        if (a.previous !== null) grandPrevTotal += a.previous;
+      }
+    });
+    data.newsPartners.total = grandTotal;
+    data.newsPartners.prevTotal = grandPrevTotal;
+    data.newsPartners.change = grandTotal - grandPrevTotal;
+    data.newsPartners.changePercent = grandPrevTotal > 0 ? (grandTotal / grandPrevTotal - 1) * 100 : null;
   }
 
   // Citations
