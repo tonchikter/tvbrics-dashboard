@@ -250,7 +250,7 @@ td {
   font-size: 0.9rem;
 }
 tr:hover td { background: rgba(212,168,83,0.03); }
-td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ── Badges ── */
 .badge {
@@ -268,20 +268,22 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .geo-grid { display: flex; flex-direction: column; gap: 10px; }
 .geo-item { display: flex; align-items: center; gap: 12px; }
 .geo-country { min-width: 160px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
-.geo-bar { flex: 1; height: 28px; background: var(--bg-card); border-radius: 6px; overflow: hidden; }
+.geo-bar { flex: 1; height: 28px; background: var(--bg-card); border-radius: 6px; position: relative; display: flex; align-items: center; }
 .geo-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), #C4963F);
   border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--bg-primary);
+  min-width: 4px;
   transition: width 0.8s ease;
 }
+.geo-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+.geo-label-inside { position: absolute; right: 8px; color: var(--bg-primary); }
+.geo-label-outside { color: var(--text-secondary); margin-left: 8px; }
 
 /* ── Metrics grid ── */
 .metrics-grid {
@@ -864,10 +866,19 @@ function renderGeo(data) {
   var maxVal = items.length > 0 ? items[0].value : 1;
   var html = '';
   items.forEach(function(item) {
-    var pct = Math.max(2, (item.value / maxVal) * 100);
+    var pct = Math.max(1, (item.value / maxVal) * 100);
+    var labelText = item.value.toFixed(1) + '%';
+    // Если полоска узкая — текст снаружи справа, иначе внутри
+    var labelHtml;
+    if (pct < 20) {
+      labelHtml = '<span class="geo-label geo-label-outside">' + labelText + '</span>';
+    } else {
+      labelHtml = '';
+    }
+    var insideLabel = pct >= 20 ? '<span class="geo-label geo-label-inside">' + labelText + '</span>' : '';
     html += '<div class="geo-item">' +
       '<div class="geo-country">' + item.flag + ' ' + item.name + '</div>' +
-      '<div class="geo-bar"><div class="geo-fill" style="width:' + pct + '%">' + item.value.toFixed(1) + '%</div></div>' +
+      '<div class="geo-bar"><div class="geo-fill" style="width:' + pct + '%"></div>' + insideLabel + labelHtml + '</div>' +
       '</div>';
   });
   document.getElementById('geoGrid').innerHTML = html;
@@ -925,15 +936,17 @@ function renderSocial(data) {
   // Table
   var tableHtml = '<thead><tr><th>Платформа</th><th class="num">Подписчики</th><th>Изменение</th><th class="num">Публикации</th><th>Статус</th></tr></thead><tbody>';
 
-  // Collect and sort by subscribers
+  // Collect and sort by subscribers (skip platforms without subscribers, e.g. VK Видео)
   var platforms = [];
   sections.forEach(function(sec) {
     var subs = sec.fields.find(function(f){ return f.label === 'Подписчики'; });
+    if (!subs) return; // Пропускаем платформы без подписчиков (VK Видео)
     var pubs = sec.fields.find(function(f){ return f.label === 'Публикации'; });
     platforms.push({
       name: sec.title,
-      subs: subs ? subs.current : 0,
-      subsChange: subs ? subs.changePercent : null,
+      subs: subs.current || 0,
+      subsChange: subs.changePercent,
+      subsField: subs,
       pubs: pubs ? pubs.current : null,
     });
   });
